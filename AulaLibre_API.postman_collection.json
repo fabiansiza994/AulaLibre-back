@@ -1,0 +1,1887 @@
+{
+  "info": {
+    "_postman_id": "aulalibre-api-collection-0001",
+    "name": "AulaLibre API",
+    "description": "Colección completa de la API de AulaLibre (Blocks, Rooms, Schedules, Availability, RoomRequests, Auth) con casos de prueba (éxito, validación 400, autorización 401/403, no encontrado 404, conflicto 409) para importar en Apidog.\n\nCómo usarla:\n1. Levanta el backend en local con el perfil `dev` (`--spring.profiles.active=dev`) para tener los 3 usuarios demo sembrados (student@aulalibre.edu / professor@aulalibre.edu / admin@aulalibre.edu).\n2. Ajusta la variable de colección `baseUrl` si tu backend no corre en `http://localhost:8080`.\n3. Corre la colección completa en orden (carpeta por carpeta, de arriba hacia abajo) con el 'Collection Runner' de Apidog/Postman: la carpeta Auth guarda los tokens en variables de colección que reutilizan las demás carpetas, y cada carpeta va guardando los IDs (blockId, roomId, scheduleId, requestId...) que usan las siguientes.\n4. Los códigos/emails/IDs de prueba se generan con timestamps para poder re-ejecutar la colección varias veces sin chocar con datos previos; la carpeta 'Cleanup' al final borra el horario de prueba y confirma que el salón principal ya no se puede eliminar (tiene solicitudes).\n\nNota: los tokens JWT expiran según `aulalibre.jwt.expiration-minutes` (60 min por defecto) — si la corrida tarda más que eso, vuelve a correr la carpeta Auth.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:8080" },
+    { "key": "studentToken", "value": "" },
+    { "key": "professorToken", "value": "" },
+    { "key": "adminToken", "value": "" },
+    { "key": "studentId", "value": "" },
+    { "key": "professorId", "value": "" },
+    { "key": "adminId", "value": "" },
+    { "key": "blockCode", "value": "" },
+    { "key": "blockId", "value": "" },
+    { "key": "blockCodeDel", "value": "" },
+    { "key": "blockIdForDeletion", "value": "" },
+    { "key": "roomId", "value": "" },
+    { "key": "roomIdForDeletion", "value": "" },
+    { "key": "scheduleId", "value": "" },
+    { "key": "wednesdayDate", "value": "" },
+    { "key": "requestDate", "value": "" },
+    { "key": "requestIdA", "value": "" },
+    { "key": "requestIdC", "value": "" },
+    { "key": "requestIdD", "value": "" }
+  ],
+  "item": [
+    {
+      "name": "1. Auth",
+      "item": [
+        {
+          "name": "Login - STUDENT (200)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/api/v1/auth/login",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"student@aulalibre.edu\",\n  \"password\": \"Student123*\"\n}",
+              "options": { "raw": { "language": "json" } }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Devuelve token y user con forma del contrato', function () {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json).to.have.property('token');",
+                  "    pm.expect(json.user.email).to.eql('student@aulalibre.edu');",
+                  "    pm.expect(json.user.role).to.eql('estudiante');",
+                  "    pm.expect(json.user).to.have.property('initials');",
+                  "    pm.collectionVariables.set('studentToken', json.token);",
+                  "    pm.collectionVariables.set('studentId', json.user.id);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Login - PROFESSOR (200)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/api/v1/auth/login",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"professor@aulalibre.edu\",\n  \"password\": \"Professor123*\"\n}",
+              "options": { "raw": { "language": "json" } }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Devuelve token y user con forma del contrato', function () {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json).to.have.property('token');",
+                  "    pm.expect(json.user.email).to.eql('professor@aulalibre.edu');",
+                  "    pm.expect(json.user.role).to.eql('profesor');",
+                  "    pm.collectionVariables.set('professorToken', json.token);",
+                  "    pm.collectionVariables.set('professorId', json.user.id);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Login - ADMIN (200)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/api/v1/auth/login",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"admin@aulalibre.edu\",\n  \"password\": \"Admin123*\"\n}",
+              "options": { "raw": { "language": "json" } }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Devuelve token y user con forma del contrato', function () {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json).to.have.property('token');",
+                  "    pm.expect(json.user.email).to.eql('admin@aulalibre.edu');",
+                  "    pm.expect(json.user.role).to.eql('administrador');",
+                  "    pm.collectionVariables.set('adminToken', json.token);",
+                  "    pm.collectionVariables.set('adminId', json.user.id);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Login - Wrong Password (401)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/api/v1/auth/login",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"professor@aulalibre.edu\",\n  \"password\": \"contraseña-incorrecta\"\n}",
+              "options": { "raw": { "language": "json" } }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 401', function () { pm.response.to.have.status(401); });",
+                  "pm.test('Mensaje genérico de credenciales inválidas', function () {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.code).to.eql('INVALID_CREDENTIALS');",
+                  "    pm.expect(json.message).to.eql('Credenciales inválidas');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Login - Unknown Email (401)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/api/v1/auth/login",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"nadie-existe@aulalibre.edu\",\n  \"password\": \"cualquierClave123\"\n}",
+              "options": { "raw": { "language": "json" } }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 401 (mismo mensaje que password incorrecta)', function () {",
+                  "    pm.response.to.have.status(401);",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.code).to.eql('INVALID_CREDENTIALS');",
+                  "    pm.expect(json.message).to.eql('Credenciales inválidas');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Login - Validation Error (400)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/api/v1/auth/login",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"\",\n  \"password\": \"\"\n}",
+              "options": { "raw": { "language": "json" } }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 400', function () { pm.response.to.have.status(400); });",
+                  "pm.test('Error de validación con fieldErrors', function () {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.error).to.eql('VALIDATION_ERROR');",
+                  "    pm.expect(json.fieldErrors).to.be.an('array').that.is.not.empty;",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Me - PROFESSOR (200)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{professorToken}}" }],
+            "url": "{{baseUrl}}/api/v1/auth/me"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Devuelve el usuario autenticado (sin password)', function () {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.email).to.eql('professor@aulalibre.edu');",
+                  "    pm.expect(json.role).to.eql('profesor');",
+                  "    pm.expect(json).to.not.have.property('password');",
+                  "    pm.expect(json).to.not.have.property('passwordHash');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Me - No Token (401)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/auth/me"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 401 con el ApiErrorResponse del proyecto', function () {",
+                  "    pm.response.to.have.status(401);",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.status).to.eql(401);",
+                  "    pm.expect(json.code).to.eql('UNAUTHORIZED');",
+                  "    pm.expect(json).to.have.property('path');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Logout - PROFESSOR (204)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{professorToken}}" }],
+            "url": "{{baseUrl}}/api/v1/auth/logout"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 204 (stateless, sin body)', function () {",
+                  "    pm.response.to.have.status(204);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "2. Blocks",
+      "item": [
+        {
+          "name": "List Blocks (200)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{studentToken}}" }],
+            "url": "{{baseUrl}}/api/v1/blocks"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200 y devuelve un arreglo', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    pm.expect(pm.response.json()).to.be.an('array');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create Block (201)",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.collectionVariables.set('blockCode', 'B' + (Date.now() % 900000 + 100000));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 201', function () { pm.response.to.have.status(201); });",
+                  "pm.test('Bloque creado, activo por defecto', function () {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.code).to.eql(pm.collectionVariables.get('blockCode'));",
+                  "    pm.expect(json.active).to.eql(true);",
+                  "    pm.collectionVariables.set('blockId', json.id);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+            ],
+            "url": "{{baseUrl}}/api/v1/blocks",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"code\": \"{{blockCode}}\",\n  \"name\": \"Bloque de Pruebas\",\n  \"description\": \"Bloque creado por la colección de pruebas de Apidog\"\n}",
+              "options": { "raw": { "language": "json" } }
+            }
+          }
+        },
+        {
+          "name": "Create Block - Forbidden STUDENT (403)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{studentToken}}" }
+            ],
+            "url": "{{baseUrl}}/api/v1/blocks",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"code\": \"X9\",\n  \"name\": \"No debería crearse\",\n  \"description\": \"\"\n}",
+              "options": { "raw": { "language": "json" } }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 403 (rol STUDENT no autorizado)', function () {",
+                  "    pm.response.to.have.status(403);",
+                  "    pm.expect(pm.response.json().code).to.eql('FORBIDDEN_OPERATION');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create Block - Validation Error (400)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+            ],
+            "url": "{{baseUrl}}/api/v1/blocks",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"code\": \"\",\n  \"name\": \"\"\n}",
+              "options": { "raw": { "language": "json" } }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 400', function () {",
+                  "    pm.response.to.have.status(400);",
+                  "    pm.expect(pm.response.json().error).to.eql('VALIDATION_ERROR');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create Block - Duplicate Code (409)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+            ],
+            "url": "{{baseUrl}}/api/v1/blocks",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"code\": \"{{blockCode}}\",\n  \"name\": \"Bloque Duplicado\",\n  \"description\": \"\"\n}",
+              "options": { "raw": { "language": "json" } }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 409 (code ya existe)', function () {",
+                  "    pm.response.to.have.status(409);",
+                  "    pm.expect(pm.response.json().code).to.eql('DUPLICATE_BLOCK_CODE');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get Block by Id (200)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{studentToken}}" }],
+            "url": "{{baseUrl}}/api/v1/blocks/{{blockId}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200 y el id coincide', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    pm.expect(String(pm.response.json().id)).to.eql(pm.collectionVariables.get('blockId'));",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get Block by Id - Not Found (404)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{studentToken}}" }],
+            "url": "{{baseUrl}}/api/v1/blocks/999999999"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 404', function () {",
+                  "    pm.response.to.have.status(404);",
+                  "    pm.expect(pm.response.json().code).to.eql('BLOCK_NOT_FOUND');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Update Block (200)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+            ],
+            "url": "{{baseUrl}}/api/v1/blocks/{{blockId}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"code\": \"{{blockCode}}\",\n  \"name\": \"Bloque de Pruebas Actualizado\",\n  \"description\": \"Descripción actualizada por la colección de pruebas\"\n}",
+              "options": { "raw": { "language": "json" } }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200 y el nombre se actualizó', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    pm.expect(pm.response.json().name).to.eql('Bloque de Pruebas Actualizado');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Toggle Active - Deactivate (200)",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": "{{baseUrl}}/api/v1/blocks/{{blockId}}/toggle-active"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200 y queda inactivo', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    pm.expect(pm.response.json().active).to.eql(false);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Toggle Active - Reactivate (200)",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": "{{baseUrl}}/api/v1/blocks/{{blockId}}/toggle-active"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200 y vuelve a quedar activo', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    pm.expect(pm.response.json().active).to.eql(true);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create Block For Deletion (201)",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.collectionVariables.set('blockCodeDel', 'D' + (Date.now() % 900000 + 100000));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 201', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "    pm.collectionVariables.set('blockIdForDeletion', pm.response.json().id);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+            ],
+            "url": "{{baseUrl}}/api/v1/blocks",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"code\": \"{{blockCodeDel}}\",\n  \"name\": \"Bloque Descartable\",\n  \"description\": \"Se borra en el siguiente paso\"\n}",
+              "options": { "raw": { "language": "json" } }
+            }
+          }
+        },
+        {
+          "name": "Delete Block (204)",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": "{{baseUrl}}/api/v1/blocks/{{blockIdForDeletion}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 204', function () { pm.response.to.have.status(204); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Delete Block - Not Found (404)",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": "{{baseUrl}}/api/v1/blocks/{{blockIdForDeletion}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 404 (ya se había borrado)', function () {",
+                  "    pm.response.to.have.status(404);",
+                  "    pm.expect(pm.response.json().code).to.eql('BLOCK_NOT_FOUND');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "3. Rooms",
+      "item": [
+        {
+          "name": "List Rooms (200)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{studentToken}}" }],
+            "url": "{{baseUrl}}/api/v1/rooms"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200 y devuelve un arreglo', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    pm.expect(pm.response.json()).to.be.an('array');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create Room (201)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+            ],
+            "url": "{{baseUrl}}/api/v1/rooms",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Salón de Pruebas\",\n  \"blockId\": {{blockId}},\n  \"floor\": 3,\n  \"capacity\": 25,\n  \"type\": \"Aula\"\n}",
+              "options": { "raw": { "language": "json" } }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 201', function () { pm.response.to.have.status(201); });",
+                  "pm.test('Salón plano con blockId (sin block anidado ni active)', function () {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(String(json.blockId)).to.eql(pm.collectionVariables.get('blockId'));",
+                  "    pm.expect(json.type).to.eql('Aula');",
+                  "    pm.expect(json).to.not.have.property('block');",
+                  "    pm.expect(json).to.not.have.property('active');",
+                  "    pm.collectionVariables.set('roomId', json.id);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create Room - Forbidden STUDENT (403)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{studentToken}}" }
+            ],
+            "url": "{{baseUrl}}/api/v1/rooms",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"No debería crearse\",\n  \"blockId\": {{blockId}},\n  \"floor\": 1,\n  \"capacity\": 10,\n  \"type\": \"Aula\"\n}",
+              "options": { "raw": { "language": "json" } }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 403', function () {",
+                  "    pm.response.to.have.status(403);",
+                  "    pm.expect(pm.response.json().code).to.eql('FORBIDDEN_OPERATION');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create Room - Validation Error (400)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+            ],
+            "url": "{{baseUrl}}/api/v1/rooms",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"\",\n  \"blockId\": {{blockId}},\n  \"floor\": -1,\n  \"capacity\": 0,\n  \"type\": \"Aula\"\n}",
+              "options": { "raw": { "language": "json" } }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 400', function () {",
+                  "    pm.response.to.have.status(400);",
+                  "    pm.expect(pm.response.json().error).to.eql('VALIDATION_ERROR');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create Room - Block Not Found (404)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+            ],
+            "url": "{{baseUrl}}/api/v1/rooms",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Salón Huérfano\",\n  \"blockId\": 999999999,\n  \"floor\": 1,\n  \"capacity\": 10,\n  \"type\": \"Aula\"\n}",
+              "options": { "raw": { "language": "json" } }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 404 (blockId no existe)', function () {",
+                  "    pm.response.to.have.status(404);",
+                  "    pm.expect(pm.response.json().code).to.eql('BLOCK_NOT_FOUND');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get Room by Id (200)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{studentToken}}" }],
+            "url": "{{baseUrl}}/api/v1/rooms/{{roomId}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get Room by Id - Not Found (404)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{studentToken}}" }],
+            "url": "{{baseUrl}}/api/v1/rooms/999999999"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 404', function () {",
+                  "    pm.response.to.have.status(404);",
+                  "    pm.expect(pm.response.json().code).to.eql('ROOM_NOT_FOUND');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Update Room (200)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+            ],
+            "url": "{{baseUrl}}/api/v1/rooms/{{roomId}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Salón de Pruebas Actualizado\",\n  \"blockId\": {{blockId}},\n  \"floor\": 3,\n  \"capacity\": 30,\n  \"type\": \"Laboratorio\"\n}",
+              "options": { "raw": { "language": "json" } }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200 y quedó como Laboratorio, capacidad 30', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.type).to.eql('Laboratorio');",
+                  "    pm.expect(json.capacity).to.eql(30);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create Room For Deletion (201)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+            ],
+            "url": "{{baseUrl}}/api/v1/rooms",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Salón Descartable\",\n  \"blockId\": {{blockId}},\n  \"floor\": 1,\n  \"capacity\": 5,\n  \"type\": \"Aula\"\n}",
+              "options": { "raw": { "language": "json" } }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 201', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "    pm.collectionVariables.set('roomIdForDeletion', pm.response.json().id);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Delete Room (204)",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": "{{baseUrl}}/api/v1/rooms/{{roomIdForDeletion}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 204', function () { pm.response.to.have.status(204); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Delete Room - Not Found (404)",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": "{{baseUrl}}/api/v1/rooms/{{roomIdForDeletion}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 404 (ya se había borrado)', function () {",
+                  "    pm.response.to.have.status(404);",
+                  "    pm.expect(pm.response.json().code).to.eql('ROOM_NOT_FOUND');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Delete Main Block - Blocked By Existing Room (409)",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": "{{baseUrl}}/api/v1/blocks/{{blockId}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 409 (el bloque todavía tiene el salón principal)', function () {",
+                  "    pm.response.to.have.status(409);",
+                  "    pm.expect(pm.response.json().code).to.eql('BLOCK_HAS_ROOMS');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "4. Schedules",
+      "item": [
+        {
+          "name": "Create Schedule (201)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+            ],
+            "url": "{{baseUrl}}/api/v1/rooms/{{roomId}}/schedules",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"day\": \"miercoles\",\n  \"start\": \"10:00\",\n  \"end\": \"12:00\",\n  \"subject\": \"Programación I\"\n}",
+              "options": { "raw": { "language": "json" } }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 201', function () { pm.response.to.have.status(201); });",
+                  "pm.test('Horario con day/start/end/subject', function () {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.day).to.eql('miercoles');",
+                  "    pm.expect(json.start).to.eql('10:00');",
+                  "    pm.expect(json.end).to.eql('12:00');",
+                  "    pm.collectionVariables.set('scheduleId', json.id);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create Schedule - Forbidden PROFESSOR (403)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{professorToken}}" }
+            ],
+            "url": "{{baseUrl}}/api/v1/rooms/{{roomId}}/schedules",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"day\": \"jueves\",\n  \"start\": \"08:00\",\n  \"end\": \"09:00\",\n  \"subject\": \"No debería crearse\"\n}",
+              "options": { "raw": { "language": "json" } }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 403 (solo ADMIN administra horarios)', function () {",
+                  "    pm.response.to.have.status(403);",
+                  "    pm.expect(pm.response.json().code).to.eql('FORBIDDEN_OPERATION');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create Schedule - Invalid Time Range (400)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+            ],
+            "url": "{{baseUrl}}/api/v1/rooms/{{roomId}}/schedules",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"day\": \"miercoles\",\n  \"start\": \"12:00\",\n  \"end\": \"10:00\",\n  \"subject\": \"Rango inválido\"\n}",
+              "options": { "raw": { "language": "json" } }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 400 (start >= end)', function () {",
+                  "    pm.response.to.have.status(400);",
+                  "    pm.expect(pm.response.json().code).to.eql('INVALID_TIME_RANGE');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create Schedule - Conflict (409)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+            ],
+            "url": "{{baseUrl}}/api/v1/rooms/{{roomId}}/schedules",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"day\": \"miercoles\",\n  \"start\": \"11:00\",\n  \"end\": \"13:00\",\n  \"subject\": \"Se solapa con Programación I\"\n}",
+              "options": { "raw": { "language": "json" } }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 409 (se solapa con el horario ya creado)', function () {",
+                  "    pm.response.to.have.status(409);",
+                  "    pm.expect(pm.response.json().code).to.eql('SCHEDULE_CONFLICT');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "List Schedules by Room (200)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{studentToken}}" }],
+            "url": "{{baseUrl}}/api/v1/rooms/{{roomId}}/schedules"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200 y contiene el horario creado', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json).to.be.an('array');",
+                  "    const found = json.find(s => String(s.id) === pm.collectionVariables.get('scheduleId'));",
+                  "    pm.expect(found, 'horario recién creado presente en la lista').to.not.be.undefined;",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "5. Availability",
+      "item": [
+        {
+          "name": "Search Availability (200)",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const d = new Date();",
+                  "const diff = (3 - d.getDay() + 7) % 7; // próximo miércoles (0 si hoy ya es miércoles)",
+                  "d.setDate(d.getDate() + diff);",
+                  "pm.collectionVariables.set('wednesdayDate', d.toISOString().slice(0, 10));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('El salón principal aparece ocupado por el horario recurrente', function () {",
+                  "    const json = pm.response.json();",
+                  "    const room = json.rooms.find(r => String(r.id) === pm.collectionVariables.get('roomId'));",
+                  "    pm.expect(room, 'salón encontrado en el resultado').to.not.be.undefined;",
+                  "    pm.expect(room.availabilityStatus).to.eql('ocupado');",
+                  "    pm.expect(room.availableUntil).to.eql('12:00');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{studentToken}}" }],
+            "url": "{{baseUrl}}/api/v1/rooms/availability?date={{wednesdayDate}}&startTime=09:00&endTime=13:00&blockId={{blockId}}&roomType=Laboratorio&minCapacity=1"
+          }
+        },
+        {
+          "name": "Search Availability - Invalid Range (400)",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const d = new Date();",
+                  "const diff = (3 - d.getDay() + 7) % 7;",
+                  "d.setDate(d.getDate() + diff);",
+                  "pm.collectionVariables.set('wednesdayDate', d.toISOString().slice(0, 10));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 400 (startTime >= endTime)', function () {",
+                  "    pm.response.to.have.status(400);",
+                  "    pm.expect(pm.response.json().code).to.eql('INVALID_TIME_RANGE');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{studentToken}}" }],
+            "url": "{{baseUrl}}/api/v1/rooms/availability?date={{wednesdayDate}}&startTime=13:00&endTime=09:00"
+          }
+        },
+        {
+          "name": "Rooms Status - All (200)",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const d = new Date();",
+                  "const diff = (3 - d.getDay() + 7) % 7;",
+                  "d.setDate(d.getDate() + diff);",
+                  "pm.collectionVariables.set('wednesdayDate', d.toISOString().slice(0, 10));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200 y devuelve un arreglo con id/status/until', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json).to.be.an('array');",
+                  "    const room = json.find(r => String(r.id) === pm.collectionVariables.get('roomId'));",
+                  "    pm.expect(room.status).to.eql('ocupado');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{studentToken}}" }],
+            "url": "{{baseUrl}}/api/v1/rooms/status?date={{wednesdayDate}}&time=11:00"
+          }
+        },
+        {
+          "name": "Room Status by Id (200)",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const d = new Date();",
+                  "const diff = (3 - d.getDay() + 7) % 7;",
+                  "d.setDate(d.getDate() + diff);",
+                  "pm.collectionVariables.set('wednesdayDate', d.toISOString().slice(0, 10));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200, ocupado por la clase', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.status).to.eql('ocupado');",
+                  "    pm.expect(json.label).to.eql('Programación I');",
+                  "    pm.expect(json.source).to.eql('clase');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{studentToken}}" }],
+            "url": "{{baseUrl}}/api/v1/rooms/{{roomId}}/status?date={{wednesdayDate}}&time=11:00"
+          }
+        },
+        {
+          "name": "Room Status by Id - Not Found (404)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{studentToken}}" }],
+            "url": "{{baseUrl}}/api/v1/rooms/999999999/status"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 404', function () {",
+                  "    pm.response.to.have.status(404);",
+                  "    pm.expect(pm.response.json().code).to.eql('ROOM_NOT_FOUND');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Room Timeline (200)",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const d = new Date();",
+                  "const diff = (3 - d.getDay() + 7) % 7;",
+                  "d.setDate(d.getDate() + diff);",
+                  "pm.collectionVariables.set('wednesdayDate', d.toISOString().slice(0, 10));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200 y contiene el bloque ocupado de la clase', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json).to.be.an('array');",
+                  "    const clase = json.find(s => s.label === 'Programación I');",
+                  "    pm.expect(clase, 'bloque de la clase presente en el timeline').to.not.be.undefined;",
+                  "    pm.expect(clase.start).to.eql('10:00');",
+                  "    pm.expect(clase.end).to.eql('12:00');",
+                  "    pm.expect(clase.source).to.eql('clase');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{studentToken}}" }],
+            "url": "{{baseUrl}}/api/v1/rooms/{{roomId}}/timeline?date={{wednesdayDate}}"
+          }
+        },
+        {
+          "name": "Room Timeline - Not Found (404)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{studentToken}}" }],
+            "url": "{{baseUrl}}/api/v1/rooms/999999999/timeline"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 404', function () {",
+                  "    pm.response.to.have.status(404);",
+                  "    pm.expect(pm.response.json().code).to.eql('ROOM_NOT_FOUND');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "6. Room Requests",
+      "item": [
+        {
+          "name": "Create Request A (201)",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const d = new Date();",
+                  "d.setDate(d.getDate() + 2);",
+                  "pm.collectionVariables.set('requestDate', d.toISOString().slice(0, 10));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 201', function () { pm.response.to.have.status(201); });",
+                  "pm.test('Solicitud creada como pendiente', function () {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.status).to.eql('pendiente');",
+                  "    pm.expect(json.reason).to.eql('Tutoría');",
+                  "    pm.expect(json.room.id).to.not.be.undefined;",
+                  "    pm.collectionVariables.set('requestIdA', json.id);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{professorToken}}" }
+            ],
+            "url": "{{baseUrl}}/api/v1/room-requests",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"roomId\": {{roomId}},\n  \"date\": \"{{requestDate}}\",\n  \"start\": \"15:00\",\n  \"end\": \"16:00\",\n  \"reason\": \"Tutoría\",\n  \"note\": \"Solicitud de prueba A\"\n}",
+              "options": { "raw": { "language": "json" } }
+            }
+          }
+        },
+        {
+          "name": "Create Request - Forbidden STUDENT (403)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{studentToken}}" }
+            ],
+            "url": "{{baseUrl}}/api/v1/room-requests",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"roomId\": {{roomId}},\n  \"date\": \"{{requestDate}}\",\n  \"start\": \"20:00\",\n  \"end\": \"21:00\",\n  \"reason\": \"Tutoría\",\n  \"note\": \"\"\n}",
+              "options": { "raw": { "language": "json" } }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 403 (solo PROFESSOR solicita salones)', function () {",
+                  "    pm.response.to.have.status(403);",
+                  "    pm.expect(pm.response.json().code).to.eql('FORBIDDEN_OPERATION');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create Request - Validation Error (400)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{professorToken}}" }
+            ],
+            "url": "{{baseUrl}}/api/v1/room-requests",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"roomId\": {{roomId}},\n  \"date\": \"{{requestDate}}\",\n  \"start\": \"16:00\",\n  \"end\": \"15:00\",\n  \"reason\": \"Tutoría\",\n  \"note\": \"\"\n}",
+              "options": { "raw": { "language": "json" } }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 400 (start >= end)', function () {",
+                  "    pm.response.to.have.status(400);",
+                  "    pm.expect(pm.response.json().code).to.eql('INVALID_TIME_RANGE');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "My Requests (200)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{professorToken}}" }],
+            "url": "{{baseUrl}}/api/v1/room-requests/my?page=0&size=10&sort=createdAt,desc"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200 con forma de página', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json).to.have.all.keys('content', 'page', 'size', 'totalElements', 'totalPages');",
+                  "    pm.expect(json.totalElements).to.be.at.least(1);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "My Requests Counts (200)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{professorToken}}" }],
+            "url": "{{baseUrl}}/api/v1/room-requests/my/counts"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200 con los 5 conteos por estado', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json).to.have.all.keys('todos', 'pendiente', 'aprobada', 'rechazada', 'cancelada');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Admin List Requests (200)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": "{{baseUrl}}/api/v1/room-requests?status=pendiente"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200 y devuelve un arreglo', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    pm.expect(pm.response.json()).to.be.an('array');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Admin List Requests - Forbidden PROFESSOR (403)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{professorToken}}" }],
+            "url": "{{baseUrl}}/api/v1/room-requests"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 403 (bandeja admin, no de profesor)', function () {",
+                  "    pm.response.to.have.status(403);",
+                  "    pm.expect(pm.response.json().code).to.eql('FORBIDDEN_OPERATION');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Approve Request - Forbidden PROFESSOR (403)",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Authorization", "value": "Bearer {{professorToken}}" }],
+            "url": "{{baseUrl}}/api/v1/room-requests/{{requestIdA}}/approve"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 403 (solo ADMIN aprueba)', function () {",
+                  "    pm.response.to.have.status(403);",
+                  "    pm.expect(pm.response.json().code).to.eql('FORBIDDEN_OPERATION');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Approve Request A (200)",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": "{{baseUrl}}/api/v1/room-requests/{{requestIdA}}/approve"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200 y queda aprobada', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    pm.expect(pm.response.json().status).to.eql('aprobada');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Approve Request A - Already Reviewed (409)",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": "{{baseUrl}}/api/v1/room-requests/{{requestIdA}}/approve"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 409 (ya no está pendiente)', function () {",
+                  "    pm.response.to.have.status(409);",
+                  "    pm.expect(pm.response.json().code).to.eql('INVALID_REQUEST_STATE');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create Request B - Room Not Available (409)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{professorToken}}" }
+            ],
+            "url": "{{baseUrl}}/api/v1/room-requests",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"roomId\": {{roomId}},\n  \"date\": \"{{requestDate}}\",\n  \"start\": \"15:30\",\n  \"end\": \"16:30\",\n  \"reason\": \"Asesoría\",\n  \"note\": \"Se solapa con la solicitud A ya aprobada\"\n}",
+              "options": { "raw": { "language": "json" } }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 409 (el salón ya está ocupado por la solicitud A aprobada)', function () {",
+                  "    pm.response.to.have.status(409);",
+                  "    pm.expect(pm.response.json().code).to.eql('ROOM_NOT_AVAILABLE');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create Request C (201)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{professorToken}}" }
+            ],
+            "url": "{{baseUrl}}/api/v1/room-requests",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"roomId\": {{roomId}},\n  \"date\": \"{{requestDate}}\",\n  \"start\": \"17:00\",\n  \"end\": \"18:00\",\n  \"reason\": \"Reunión académica\",\n  \"note\": \"Solicitud de prueba C, para rechazar\"\n}",
+              "options": { "raw": { "language": "json" } }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 201', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "    pm.collectionVariables.set('requestIdC', pm.response.json().id);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Reject Request C (200)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+            ],
+            "url": "{{baseUrl}}/api/v1/room-requests/{{requestIdC}}/reject",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reviewNote\": \"El salón ya tenía otra actividad asignada en ese horario\"\n}",
+              "options": { "raw": { "language": "json" } }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200, queda rechazada con reviewNote', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.status).to.eql('rechazada');",
+                  "    pm.expect(json.reviewNote).to.eql('El salón ya tenía otra actividad asignada en ese horario');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Reject Request C - Already Reviewed (409)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+            ],
+            "url": "{{baseUrl}}/api/v1/room-requests/{{requestIdC}}/reject",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reviewNote\": \"Segundo intento, no debería aplicarse\"\n}",
+              "options": { "raw": { "language": "json" } }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 409 (ya no está pendiente)', function () {",
+                  "    pm.response.to.have.status(409);",
+                  "    pm.expect(pm.response.json().code).to.eql('INVALID_REQUEST_STATE');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create Request D (201)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{professorToken}}" }
+            ],
+            "url": "{{baseUrl}}/api/v1/room-requests",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"roomId\": {{roomId}},\n  \"date\": \"{{requestDate}}\",\n  \"start\": \"18:30\",\n  \"end\": \"19:30\",\n  \"reason\": \"Actividad extracurricular\",\n  \"note\": \"Solicitud de prueba D, para cancelar\"\n}",
+              "options": { "raw": { "language": "json" } }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 201', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "    pm.collectionVariables.set('requestIdD', pm.response.json().id);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Cancel Request D (200)",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Authorization", "value": "Bearer {{professorToken}}" }],
+            "url": "{{baseUrl}}/api/v1/room-requests/{{requestIdD}}/cancel"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200, queda cancelada (el dueño sí puede)', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    pm.expect(pm.response.json().status).to.eql('cancelada');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Cancel Request D - Invalid State (409)",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Authorization", "value": "Bearer {{professorToken}}" }],
+            "url": "{{baseUrl}}/api/v1/room-requests/{{requestIdD}}/cancel"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 409 (ya no está pendiente)', function () {",
+                  "    pm.response.to.have.status(409);",
+                  "    pm.expect(pm.response.json().code).to.eql('INVALID_REQUEST_STATE');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "7. Cleanup",
+      "item": [
+        {
+          "name": "Delete Schedule (204)",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": "{{baseUrl}}/api/v1/schedules/{{scheduleId}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 204', function () { pm.response.to.have.status(204); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Delete Schedule - Not Found (404)",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": "{{baseUrl}}/api/v1/schedules/{{scheduleId}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 404 (ya se había borrado)', function () {",
+                  "    pm.response.to.have.status(404);",
+                  "    pm.expect(pm.response.json().code).to.eql('SCHEDULE_NOT_FOUND');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Delete Main Room - Blocked By Existing Requests (409)",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": "{{baseUrl}}/api/v1/rooms/{{roomId}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 409 (el salón tiene solicitudes asociadas)', function () {",
+                  "    pm.response.to.have.status(409);",
+                  "    pm.expect(pm.response.json().code).to.eql('ROOM_HAS_REQUESTS');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
